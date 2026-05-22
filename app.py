@@ -1,26 +1,19 @@
 import os
-from flask import Flask, request, jsonify
-from flask_sock import Sock
 import json
+from flask import Flask, request, jsonify
+from simple_websocket import Server, ConnectionClosed
 
 app = Flask(__name__)
-sock = Sock(app)
 
-# Store connected users
 connected_users = {}
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
     return "VoxyzH Server Running!"
 
-@app.route("/call", methods=["POST"])
-def make_call():
-    to_number = request.json.get("to")
-    message = request.json.get("message")
-    return jsonify({"status": "calling"})
-
-@sock.route("/ws")
-def websocket(ws):
+@app.route("/ws", websocket=True)
+def websocket():
+    ws = Server.accept(request.environ)
     user_id = None
     try:
         while True:
@@ -42,10 +35,10 @@ def websocket(ws):
                             "from": user_id,
                             "message": msg.get("message")
                         }))
-
-    except:
+    except ConnectionClosed:
         if user_id and user_id in connected_users:
             del connected_users[user_id]
+    return ""
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
